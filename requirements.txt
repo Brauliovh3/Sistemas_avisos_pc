@@ -1,0 +1,16 @@
+# Sistema de Avisos - Dependencias
+# Este archivo lista todas las librerías necesarias para el proyecto
+
+# Ninguna dependencia externa requerida
+# El proyecto usa solo librerías estándar de Python:
+# - tkinter (interfaz gráfica) - incluida con Python
+# - socket (comunicación red) - incluida con Python  
+# - threading (hilos) - incluida con Python
+# - json (manejo JSON) - incluida con Python
+# - datetime (fechas) - incluida con Python
+
+# Para Windows, se usa winsound para alertas sonoras (incluida con Python en Windows)
+
+# Requisitos del sistema:
+# - Python 3.6 o superior
+# - Sistema operativo con interfaz gráfica (Windows, Linux con X11, macOS)
