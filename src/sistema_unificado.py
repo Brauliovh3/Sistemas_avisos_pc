@@ -4,7 +4,7 @@ Sistema de Avisos Unificado - Todas las funciones en una sola ventana
 """
 
 import tkinter as tk
-from tkinter import messagebox, ttk
+from tkinter import messagebox, ttk, simpledialog
 import socket
 import json
 from datetime import datetime
@@ -176,6 +176,36 @@ class SistemaAvisosUnificado:
             padx=20,
             pady=10,
             width=20
+        ).pack(side='left', padx=10)
+        
+        # Segunda fila de botones
+        btn_frame2 = tk.Frame(inicio_frame, bg='#263238')
+        btn_frame2.pack(fill='x', padx=15, pady=(0, 15))
+        
+        # Botón diagnóstico completo
+        tk.Button(
+            btn_frame2,
+            text="🔧 DIAGNÓSTICO COMPLETO",
+            command=self.diagnostico_completo,
+            bg='#9c27b0',
+            fg='white',
+            font=('Arial', 12, 'bold'),
+            padx=20,
+            pady=8,
+            width=25
+        ).pack(side='left', padx=10)
+        
+        # Botón probar conexión rápida
+        tk.Button(
+            btn_frame2,
+            text="⚡ PRUEBA RÁPIDA",
+            command=self.prueba_rapida_conexion,
+            bg='#e91e63',
+            fg='white',
+            font=('Arial', 12, 'bold'),
+            padx=20,
+            pady=8,
+            width=25
         ).pack(side='left', padx=10)
         
         # Información de red
@@ -870,9 +900,11 @@ class SistemaAvisosUnificado:
             ventana_aviso.attributes('-topmost', True)
             ventana_aviso.configure(bg='red')
             
+            # Frame principal con animación
             frame_principal = tk.Frame(ventana_aviso, bg='red')
             frame_principal.pack(expand=True, fill='both', padx=50, pady=50)
             
+            # Título parpadeante
             titulo = tk.Label(
                 frame_principal,
                 text="🚨 AVISO IMPORTANTE 🚨",
@@ -882,33 +914,59 @@ class SistemaAvisosUnificado:
             )
             titulo.pack(pady=30)
             
+            # Mensaje principal
+            mensaje_texto = aviso.get('mensaje', 'Aviso sin mensaje')
             mensaje = tk.Label(
                 frame_principal,
-                text=aviso.get('mensaje', 'Aviso sin mensaje'),
+                text=mensaje_texto,
                 font=('Arial', 36, 'bold'),
                 fg='yellow',
                 bg='red',
-                wraplength=800,
+                wraplength=900,
                 justify='center'
             )
             mensaje.pack(pady=30)
             
-            info = f"Enviado desde: {origen[0]}\nHora: {datetime.now().strftime('%H:%M:%S')}"
+            # Información adicional
+            timestamp = aviso.get('timestamp', datetime.now().isoformat())
+            try:
+                fecha_hora = datetime.fromisoformat(timestamp.replace('Z', '+00:00')).strftime('%d/%m/%Y %H:%M:%S')
+            except:
+                fecha_hora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
+                
+            info = f"📍 Enviado desde: {origen[0]}\n⏰ Hora: {fecha_hora}"
             info_label = tk.Label(
                 frame_principal,
                 text=info,
                 font=('Arial', 20),
                 fg='white',
-                bg='red'
+                bg='red',
+                justify='center'
             )
             info_label.pack(pady=20)
+            
+            # Frame de botones
+            frame_botones = tk.Frame(frame_principal, bg='red')
+            frame_botones.pack(pady=40)
             
             def cerrar_aviso():
                 ventana_aviso.destroy()
             
+            def responder_aviso():
+                # Permitir responder al aviso
+                respuesta = simpledialog.askstring(
+                    "Responder Aviso", 
+                    "Enviar respuesta:",
+                    parent=ventana_aviso
+                )
+                if respuesta:
+                    self.enviar_respuesta_aviso(origen[0], respuesta)
+                cerrar_aviso()
+            
+            # Botón cerrar
             boton_cerrar = tk.Button(
-                frame_principal,
-                text="CERRAR AVISO",
+                frame_botones,
+                text="✅ CERRAR AVISO",
                 font=('Arial', 24, 'bold'),
                 bg='white',
                 fg='red',
@@ -916,21 +974,103 @@ class SistemaAvisosUnificado:
                 padx=30,
                 pady=15
             )
-            boton_cerrar.pack(pady=40)
+            boton_cerrar.pack(side='left', padx=20)
             
+            # Botón responder
+            boton_responder = tk.Button(
+                frame_botones,
+                text="📨 RESPONDER",
+                font=('Arial', 24, 'bold'),
+                bg='#4caf50',
+                fg='white',
+                command=responder_aviso,
+                padx=30,
+                pady=15
+            )
+            boton_responder.pack(side='left', padx=20)
+            
+            # Auto-cerrar si está configurado
             if aviso.get('auto_cerrar', False):
                 ventana_aviso.after(10000, cerrar_aviso)
+                
+                # Mostrar cuenta regresiva
+                def actualizar_cuenta(segundos):
+                    if segundos > 0:
+                        titulo.config(text=f"🚨 AVISO IMPORTANTE 🚨\nSe cerrará en {segundos} segundos")
+                        ventana_aviso.after(1000, lambda: actualizar_cuenta(segundos - 1))
+                    else:
+                        cerrar_aviso()
+                
+                ventana_aviso.after(1000, lambda: actualizar_cuenta(9))
             
+            # Atajos de teclado
             ventana_aviso.bind('<Escape>', lambda e: cerrar_aviso())
+            ventana_aviso.bind('<Return>', lambda e: cerrar_aviso())
+            ventana_aviso.bind('<space>', lambda e: cerrar_aviso())
             
-            try:
-                import winsound
-                winsound.Beep(1000, 500)
-            except:
-                pass
+            # Efecto de parpadeo del título
+            def parpadear():
+                try:
+                    color_actual = titulo.cget('fg')
+                    nuevo_color = 'yellow' if color_actual == 'white' else 'white'
+                    titulo.config(fg=nuevo_color)
+                    ventana_aviso.after(500, parpadear)
+                except:
+                    pass
+            
+            parpadear()
+            
+            # Sonido de alerta (múltiples intentos)
+            def reproducir_sonido():
+                try:
+                    import winsound
+                    # Sonido más llamativo
+                    for i in range(3):
+                        winsound.Beep(1000, 300)
+                        if i < 2:
+                            ventana_aviso.after(100, lambda: None)
+                except:
+                    try:
+                        import os
+                        os.system('echo \a')  # Beep del sistema
+                    except:
+                        pass
+            
+            reproducir_sonido()
+            
+            # Focus en la ventana
+            ventana_aviso.focus_force()
+            ventana_aviso.grab_set()
         
-        # Ejecutar en hilo principal para evitar problemas con tkinter
+        # Ejecutar en el hilo principal de la GUI
         self.ventana.after(0, crear_ventana_aviso)
+    
+    def enviar_respuesta_aviso(self, ip_origen, respuesta):
+        """Envía una respuesta al aviso recibido"""
+        try:
+            puerto = 8888  # Puerto estándar
+            mensaje_respuesta = f"Respuesta: {respuesta}"
+            
+            self.agregar_log(f"📤 Enviando respuesta a {ip_origen}")
+            
+            aviso_respuesta = {
+                'mensaje': mensaje_respuesta,
+                'timestamp': datetime.now().isoformat(),
+                'tipo': 'respuesta_aviso',
+                'auto_cerrar': True
+            }
+            
+            def enviar():
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    sock.settimeout(5)
+                    sock.connect((ip_origen, puerto))
+                    sock.send(json.dumps(aviso_respuesta, ensure_ascii=False).encode('utf-8'))
+                    self.agregar_log("✅ Respuesta enviada")
+            
+            threading.Thread(target=enviar, daemon=True).start()
+            
+        except Exception as e:
+            self.agregar_log(f"❌ Error enviando respuesta: {e}")
     
     # === MÉTODOS DE ENVÍO ===
     
@@ -959,20 +1099,25 @@ class SistemaAvisosUnificado:
                 ip = self.entry_ip_destino.get().strip()
                 puerto = int(self.entry_puerto_destino.get().strip())
                 
+                self.agregar_log(f"🔍 Probando conexión a {ip}:{puerto}")
+                
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
                     sock.settimeout(3)
                     resultado = sock.connect_ex((ip, puerto))
                     
                     if resultado == 0:
                         self.agregar_log(f"✅ Conexión exitosa a {ip}:{puerto}")
-                        messagebox.showinfo("Éxito", "¡Conexión exitosa!")
+                        messagebox.showinfo("Conexión Exitosa", f"✅ ¡Conexión exitosa con {ip}:{puerto}!\n\nLa computadora destino está lista para recibir avisos.")
                     else:
-                        self.agregar_log(f"❌ No se puede conectar a {ip}:{puerto}")
-                        messagebox.showerror("Error", "No se puede conectar")
+                        self.agregar_log(f"❌ No se puede conectar a {ip}:{puerto} (código: {resultado})")
+                        messagebox.showerror("Error de Conexión", f"❌ No se puede conectar a {ip}:{puerto}\n\nVerifica que:\n• La IP sea correcta\n• El servidor esté ejecutándose en la otra PC\n• No haya firewall bloqueando el puerto {puerto}\n• Ambas computadoras estén en la misma red")
                         
+            except ValueError:
+                messagebox.showerror("Error", "❌ El puerto debe ser un número válido")
+                self.agregar_log("❌ Puerto inválido")
             except Exception as e:
-                self.agregar_log(f"❌ Error en prueba: {e}")
-                messagebox.showerror("Error", f"Error: {str(e)}")
+                self.agregar_log(f"❌ Error en prueba de conexión: {e}")
+                messagebox.showerror("Error", f"❌ Error probando conexión:\n{str(e)}")
         
         threading.Thread(target=prueba, daemon=True).start()
     
@@ -990,6 +1135,34 @@ class SistemaAvisosUnificado:
         auto_cerrar = self.var_auto_cerrar.get()
         self.enviar_aviso(mensaje, auto_cerrar)
     
+    def probar_conexion(self):
+        """Prueba la conexión con el destino"""
+        def test():
+            try:
+                ip = self.entry_ip_destino.get().strip()
+                puerto = int(self.entry_puerto_destino.get().strip())
+                
+                self.agregar_log(f"🔍 Probando conexión a {ip}:{puerto}")
+                
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    sock.settimeout(3)
+                    resultado = sock.connect_ex((ip, puerto))
+                    
+                    if resultado == 0:
+                        self.agregar_log("✅ Conexión exitosa")
+                        messagebox.showinfo("Éxito", f"Conexión exitosa con {ip}:{puerto}")
+                    else:
+                        self.agregar_log(f"❌ No se puede conectar (código: {resultado})")
+                        messagebox.showerror("Error", f"No se puede conectar a {ip}:{puerto}\n\nVerifica que:\n- La IP sea correcta\n- El servidor esté ejecutándose\n- No haya firewall bloqueando")
+                        
+            except ValueError:
+                messagebox.showerror("Error", "Puerto debe ser un número")
+            except Exception as e:
+                self.agregar_log(f"❌ Error probando conexión: {e}")
+                messagebox.showerror("Error", f"Error: {str(e)}")
+        
+        threading.Thread(target=test, daemon=True).start()
+
     def enviar_aviso(self, mensaje, auto_cerrar=False):
         """Envía aviso a IP configurada"""
         def envio():
@@ -1011,7 +1184,7 @@ class SistemaAvisosUnificado:
                 }
                 
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                    sock.settimeout(5)
+                    sock.settimeout(10)  # Aumentado de 5 a 10 segundos
                     sock.connect((ip, puerto))
                     sock.send(json.dumps(aviso, ensure_ascii=False).encode('utf-8'))
                     
@@ -1024,9 +1197,18 @@ class SistemaAvisosUnificado:
                     else:
                         self.agregar_log("❌ Error en respuesta del servidor")
                         
+            except socket.timeout:
+                self.agregar_log(f"❌ Timeout - No respuesta de {ip}:{puerto}")
+                messagebox.showerror("Error de Conexión", f"Timeout conectando a {ip}:{puerto}\n\n¿El servidor está funcionando en esa computadora?")
+            except ConnectionRefusedError:
+                self.agregar_log(f"❌ Conexión rechazada por {ip}:{puerto}")
+                messagebox.showerror("Error de Conexión", f"Conexión rechazada por {ip}:{puerto}\n\n¿El servidor está funcionando en el puerto {puerto}?")
+            except socket.gaierror:
+                self.agregar_log(f"❌ No se puede resolver la IP: {ip}")
+                messagebox.showerror("Error de Red", f"No se puede resolver la IP: {ip}\n\nVerifica que la IP sea correcta.")
             except Exception as e:
                 self.agregar_log(f"❌ Error enviando: {e}")
-                messagebox.showerror("Error", f"Error: {str(e)}")
+                messagebox.showerror("Error", f"Error enviando mensaje:\n{str(e)}")
         
         threading.Thread(target=envio, daemon=True).start()
     
@@ -1285,6 +1467,202 @@ class SistemaAvisosUnificado:
         self.text_logs_principal.config(state='disabled')
         self.agregar_log("Logs limpiados")
     
+    def diagnostico_completo(self):
+        """Realiza un diagnóstico completo del sistema"""
+        def ejecutar_diagnostico():
+            # Crear ventana de diagnóstico
+            ventana_diag = tk.Toplevel(self.ventana)
+            ventana_diag.title("🔧 Diagnóstico Completo del Sistema")
+            ventana_diag.geometry("800x600")
+            ventana_diag.configure(bg='#263238')
+            
+            # Frame principal
+            frame_principal = tk.Frame(ventana_diag, bg='#263238')
+            frame_principal.pack(fill='both', expand=True, padx=20, pady=20)
+            
+            # Título
+            titulo = tk.Label(
+                frame_principal,
+                text="🔧 DIAGNÓSTICO COMPLETO DEL SISTEMA",
+                font=('Arial', 16, 'bold'),
+                fg='#00bcd4',
+                bg='#263238'
+            )
+            titulo.pack(pady=(0, 20))
+            
+            # Área de texto para resultados
+            texto_frame = tk.Frame(frame_principal, bg='#263238')
+            texto_frame.pack(fill='both', expand=True)
+            
+            texto_resultado = tk.Text(
+                texto_frame,
+                font=('Consolas', 10),
+                bg='#1e2832',
+                fg='white',
+                wrap='word',
+                height=25
+            )
+            scrollbar = tk.Scrollbar(texto_frame, orient='vertical', command=texto_resultado.yview)
+            texto_resultado.configure(yscrollcommand=scrollbar.set)
+            
+            texto_resultado.pack(side='left', fill='both', expand=True)
+            scrollbar.pack(side='right', fill='y')
+            
+            # Función para agregar texto
+            def agregar_resultado(texto):
+                texto_resultado.insert(tk.END, texto + "\n")
+                texto_resultado.see(tk.END)
+                ventana_diag.update()
+            
+            # Comenzar diagnóstico
+            agregar_resultado("=== INICIANDO DIAGNÓSTICO COMPLETO ===\n")
+            
+            # 1. Información de red local
+            agregar_resultado("1. 🌐 INFORMACIÓN DE RED LOCAL")
+            try:
+                import socket
+                hostname = socket.gethostname()
+                mi_ip = socket.gethostbyname(hostname)
+                agregar_resultado(f"   ✅ Nombre del equipo: {hostname}")
+                agregar_resultado(f"   ✅ Mi IP local: {mi_ip}")
+            except Exception as e:
+                agregar_resultado(f"   ❌ Error obteniendo info de red: {e}")
+            
+            agregar_resultado("")
+            
+            # 2. Estado del servidor
+            agregar_resultado("2. 🖥️ ESTADO DEL SERVIDOR LOCAL")
+            if self.servidor_activo:
+                agregar_resultado("   ✅ Servidor está ACTIVO")
+                agregar_resultado(f"   ✅ Puerto: {8888}")
+            else:
+                agregar_resultado("   ⚠️ Servidor está INACTIVO")
+                agregar_resultado("   💡 Sugerencia: Inicia el servidor para recibir avisos")
+            
+            agregar_resultado("")
+            
+            # 3. Probar puertos
+            agregar_resultado("3. 🔍 VERIFICACIÓN DE PUERTOS")
+            puertos_comunes = [8888, 8080, 3000, 5000]
+            for puerto in puertos_comunes:
+                try:
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                        sock.settimeout(1)
+                        resultado = sock.connect_ex(('localhost', puerto))
+                        if resultado == 0:
+                            agregar_resultado(f"   ✅ Puerto {puerto}: ABIERTO")
+                        else:
+                            agregar_resultado(f"   ⚪ Puerto {puerto}: Cerrado")
+                except Exception as e:
+                    agregar_resultado(f"   ❌ Puerto {puerto}: Error - {e}")
+            
+            agregar_resultado("")
+            
+            # 4. Verificar computadoras configuradas
+            agregar_resultado("4. 💻 VERIFICACIÓN DE COMPUTADORAS CONFIGURADAS")
+            if self.computadoras:
+                for i, pc in enumerate(self.computadoras, 1):
+                    agregar_resultado(f"   Probando PC {i}: {pc['nombre']} ({pc['ip']})")
+                    try:
+                        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                            sock.settimeout(3)
+                            resultado = sock.connect_ex((pc['ip'], 8888))
+                            if resultado == 0:
+                                agregar_resultado(f"   ✅ {pc['nombre']}: ONLINE - Puede recibir avisos")
+                            else:
+                                agregar_resultado(f"   ❌ {pc['nombre']}: OFFLINE - No responde")
+                    except Exception as e:
+                        agregar_resultado(f"   ❌ {pc['nombre']}: Error - {e}")
+            else:
+                agregar_resultado("   ⚠️ No hay computadoras configuradas")
+                agregar_resultado("   💡 Agrega computadoras en la pestaña 'Admin PCs'")
+            
+            agregar_resultado("")
+            
+            # 5. Verificar IPs guardadas
+            agregar_resultado("5. 📋 IPS GUARDADAS PARA ENVÍO")
+            if self.ips_guardadas:
+                for i, ip in enumerate(self.ips_guardadas, 1):
+                    agregar_resultado(f"   Probando IP {i}: {ip}")
+                    try:
+                        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                            sock.settimeout(2)
+                            resultado = sock.connect_ex((ip, 8888))
+                            if resultado == 0:
+                                agregar_resultado(f"   ✅ {ip}: RESPONDE")
+                            else:
+                                agregar_resultado(f"   ❌ {ip}: NO RESPONDE")
+                    except Exception as e:
+                        agregar_resultado(f"   ❌ {ip}: Error - {e}")
+            else:
+                agregar_resultado("   ⚠️ No hay IPs guardadas")
+            
+            agregar_resultado("")
+            
+            # 6. Consejos y recomendaciones
+            agregar_resultado("6. 💡 CONSEJOS Y RECOMENDACIONES")
+            if not self.servidor_activo:
+                agregar_resultado("   📌 Inicia el servidor para recibir avisos")
+            
+            pcs_offline = [pc for pc in self.computadoras if pc.get('estado') != 'online']
+            if pcs_offline:
+                agregar_resultado(f"   📌 {len(pcs_offline)} PC(s) no responden - verifica que tengan el sistema activo")
+            
+            if not self.computadoras:
+                agregar_resultado("   📌 Configura las computadoras en 'Admin PCs' para mejor gestión")
+            
+            agregar_resultado("\n=== DIAGNÓSTICO COMPLETADO ===")
+            
+            # Botón cerrar
+            btn_cerrar = tk.Button(
+                frame_principal,
+                text="✅ CERRAR DIAGNÓSTICO",
+                command=ventana_diag.destroy,
+                bg='#4caf50',
+                fg='white',
+                font=('Arial', 12, 'bold'),
+                padx=20,
+                pady=10
+            )
+            btn_cerrar.pack(pady=20)
+        
+        # Ejecutar en hilo separado
+        threading.Thread(target=ejecutar_diagnostico, daemon=True).start()
+    
+    def prueba_rapida_conexion(self):
+        """Prueba rápida de conexión con IP actual"""
+        try:
+            ip = self.entry_ip_destino.get().strip()
+            if not ip:
+                messagebox.showerror("Error", "Configura una IP destino primero")
+                return
+            
+            puerto = int(self.entry_puerto_destino.get().strip())
+            
+            def prueba():
+                try:
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                        sock.settimeout(2)
+                        resultado = sock.connect_ex((ip, puerto))
+                        
+                        if resultado == 0:
+                            messagebox.showinfo("Prueba Rápida", f"✅ ¡Conexión exitosa!\n\n{ip}:{puerto} está respondiendo")
+                            self.agregar_log(f"✅ Prueba rápida exitosa: {ip}:{puerto}")
+                        else:
+                            messagebox.showerror("Prueba Rápida", f"❌ No se puede conectar\n\n{ip}:{puerto} no responde\n\n¿Está el servidor activo en esa PC?")
+                            self.agregar_log(f"❌ Prueba rápida falló: {ip}:{puerto}")
+                            
+                except Exception as e:
+                    messagebox.showerror("Error", f"❌ Error en prueba:\n{str(e)}")
+                    self.agregar_log(f"❌ Error en prueba rápida: {e}")
+            
+            threading.Thread(target=prueba, daemon=True).start()
+            
+        except ValueError:
+            messagebox.showerror("Error", "Puerto debe ser un número")
+        except Exception as e:
+            messagebox.showerror("Error", f"Error: {str(e)}")
+
     def al_cerrar(self):
         """Acciones al cerrar"""
         if self.servidor_activo:

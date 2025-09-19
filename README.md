@@ -17,11 +17,37 @@ Un sistema simple y efectivo para enviar avisos urgentes entre computadoras en u
 
 ### 📱 **Características Generales**
 - **Interfaz Simple**: Botón grande y fácil de usar para enviar avisos
-- **Notificación Visual**: Ventana en pantalla completa con mensaje destacado  
+- **Notificación Visual**: Ventana en pantalla completa con mensaje destacado y efectos
+- **Sistema de Respuestas**: Permite responder a los avisos recibidos  
 - **Avisos Rápidos**: Botones predefinidos para mensajes comunes
-- **Alerta Sonora**: Sonido de notificación en Windows
+- **Alerta Sonora**: Sonidos múltiples de notificación en Windows
+- **🔧 Diagnóstico Avanzado**: Herramientas completas para solucionar problemas
+- **⚡ Pruebas de Conectividad**: Verificación rápida y detallada de conexiones
+- **🎨 Animaciones**: Efectos visuales con parpadeo y cuenta regresiva
 - **Sin Dependencias**: Solo usa librerías estándar de Python
 - **Multiplataforma**: Funciona en Windows, Linux y macOS
+
+## 🛠️ Herramientas de Diagnóstico
+
+### 🔧 **Diagnóstico Completo**
+- **Análisis de Red**: Verifica IP local y configuración de red
+- **Estado del Servidor**: Confirma si el servidor está activo
+- **Verificación de Puertos**: Prueba puertos comunes (8888, 8080, etc.)
+- **Test de Computadoras**: Verifica conectividad con todas las PCs configuradas
+- **Análisis de IPs**: Prueba todas las IPs guardadas
+- **Consejos Personalizados**: Sugerencias específicas para solucionar problemas
+
+### ⚡ **Pruebas Rápidas**
+- **Prueba Rápida**: Test inmediato de la IP destino configurada
+- **Prueba de Conexión**: Verificación específica con mensajes detallados
+- **Verificar Todas**: Revisa el estado de todas las PCs registradas
+- **Detectar IP**: Encuentra automáticamente tu IP local
+
+### 📊 **Mensajes de Error Mejorados**
+- **Timeout**: "No respuesta - ¿Servidor activo en destino?"
+- **Connection Refused**: "Conexión rechazada - ¿Puerto bloqueado?"
+- **Network Error**: "Error de red - ¿IPs en misma red?"
+- **Consejos Específicos**: Cada error incluye sugerencias de solución
 
 ## 🚀 Instalación y Uso Rápido
 
