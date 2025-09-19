@@ -32,7 +32,7 @@ class SistemaAvisosUnificado:
                     config = json.load(f)
                     self.ips_guardadas = config.get('ips_guardadas', ['192.168.1.100'])
                     self.computadoras = config.get('computadoras', [])
-        except:
+        except Exception as e:
             self.ips_guardadas = ['192.168.1.100', '192.168.1.101']
             self.computadoras = [
                 {"nombre": "PC Oficina", "ip": "192.168.1.100", "estado": "offline"},
@@ -1279,7 +1279,12 @@ class SistemaAvisosUnificado:
         dialog.configure(bg='#1e2832')
         dialog.transient(self.ventana)
         dialog.grab_set()
-        dialog.eval('tk::PlaceWindow . center')
+        
+        # Centrar la ventana manualmente
+        dialog.update_idletasks()
+        x = (dialog.winfo_screenwidth() // 2) - (400 // 2)
+        y = (dialog.winfo_screenheight() // 2) - (200 // 2)
+        dialog.geometry(f"400x200+{x}+{y}")
         
         tk.Label(dialog, text="Nombre:", font=('Arial', 11, 'bold'),
                 fg='white', bg='#1e2832').pack(anchor='w', padx=20, pady=(20, 5))
