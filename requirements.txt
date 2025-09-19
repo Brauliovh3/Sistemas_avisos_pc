@@ -1,8 +1,10 @@
 # Sistema de Avisos - Dependencias
 # Este archivo lista todas las librerías necesarias para el proyecto
 
-# Ninguna dependencia externa requerida
-# El proyecto usa solo librerías estándar de Python:
+# Dependencias requeridas:
+pillow>=8.0.0
+
+# Librerías estándar de Python (incluidas automáticamente):
 # - tkinter (interfaz gráfica) - incluida con Python
 # - socket (comunicación red) - incluida con Python  
 # - threading (hilos) - incluida con Python

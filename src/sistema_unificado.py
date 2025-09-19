@@ -10,6 +10,7 @@ import json
 from datetime import datetime
 import threading
 import os
+from PIL import Image, ImageTk
 
 class SistemaAvisosUnificado:
     def __init__(self):
@@ -19,8 +20,11 @@ class SistemaAvisosUnificado:
         self.hilo_servidor = None
         self.computadoras = []
         self.ips_guardadas = []
+        self.icono_app = None
+        self.icono_pequeño = None
         
         self.cargar_configuracion()
+        self.cargar_iconos()
         self.configurar_ventana()
         self.crear_interfaz()
         
@@ -39,6 +43,33 @@ class SistemaAvisosUnificado:
                 {"nombre": "Laptop Sala", "ip": "192.168.1.101", "estado": "offline"}
             ]
     
+    def cargar_iconos(self):
+        """Carga los iconos de la aplicación"""
+        try:
+            # Verificar si existe el archivo de icono
+            ruta_icono = os.path.join(os.path.dirname(__file__), 'icono.png')
+            if os.path.exists(ruta_icono):
+                # Cargar icono principal para la ventana
+                imagen_original = Image.open(ruta_icono)
+                
+                # Redimensionar para icono de ventana (32x32)
+                icono_ventana = imagen_original.resize((32, 32), Image.Resampling.LANCZOS)
+                self.icono_app = ImageTk.PhotoImage(icono_ventana)
+                
+                # Redimensionar para uso en interfaz (64x64)
+                icono_interfaz = imagen_original.resize((64, 64), Image.Resampling.LANCZOS)
+                self.icono_pequeño = ImageTk.PhotoImage(icono_interfaz)
+                
+                # Redimensionar para fondo de mensajes (128x128)
+                icono_mensaje = imagen_original.resize((128, 128), Image.Resampling.LANCZOS)
+                self.icono_mensaje = ImageTk.PhotoImage(icono_mensaje)
+                
+        except Exception as e:
+            print(f"No se pudo cargar el icono: {e}")
+            self.icono_app = None
+            self.icono_pequeño = None
+            self.icono_mensaje = None
+    
     def guardar_configuracion(self):
         """Guarda configuración actual"""
         try:
@@ -53,10 +84,18 @@ class SistemaAvisosUnificado:
     
     def configurar_ventana(self):
         """Configura la ventana principal"""
-        self.ventana.title("🚀 Sistema de Avisos")
-        self.ventana.geometry("1200x800")
-        self.ventana.configure(bg='#0d1421')
+        self.ventana.title("🚀 Sistema de Avisos - Centro de Control")
+        self.ventana.geometry("1400x900")
+        self.ventana.configure(bg='#0a0e1a')
         self.ventana.eval('tk::PlaceWindow . center')
+        
+        # Configurar icono de la ventana
+        if self.icono_app:
+            self.ventana.iconphoto(False, self.icono_app)
+        
+        # Mejorar apariencia
+        self.ventana.resizable(True, True)
+        self.ventana.minsize(1200, 800)
         
         # Evitar que se abran otras ventanas
         self.ventana.focus_force()
@@ -68,6 +107,12 @@ class SistemaAvisosUnificado:
         self.crear_header()
         
         # Notebook para pestañas
+        style = ttk.Style()
+        style.theme_use('clam')
+        style.configure('TNotebook', background='#0a0e1a')
+        style.configure('TNotebook.Tab', background='#1a237e', foreground='white', padding=[20, 10])
+        style.map('TNotebook.Tab', background=[('selected', '#3f51b5')])
+        
         self.notebook = ttk.Notebook(self.ventana)
         self.notebook.pack(fill='both', expand=True, padx=10, pady=10)
         
@@ -94,19 +139,46 @@ class SistemaAvisosUnificado:
     
     def crear_header(self):
         """Crea el header principal"""
-        header_frame = tk.Frame(self.ventana, bg='#0d1421', height=80)
+        header_frame = tk.Frame(self.ventana, bg='#0a0e1a', height=100)
         header_frame.pack(fill='x', pady=(0, 10))
         header_frame.pack_propagate(False)
         
+        # Frame para icono y título
+        titulo_frame = tk.Frame(header_frame, bg='#0a0e1a')
+        titulo_frame.pack(expand=True)
+        
+        # Icono de la aplicación
+        if self.icono_pequeño:
+            icono_label = tk.Label(
+                titulo_frame,
+                image=self.icono_pequeño,
+                bg='#0a0e1a'
+            )
+            icono_label.pack(side='left', padx=(0, 15))
+        
+        # Frame para textos
+        texto_frame = tk.Frame(titulo_frame, bg='#0a0e1a')
+        texto_frame.pack(side='left')
+        
         # Título principal
         titulo = tk.Label(
-            header_frame,
-            text="🚀 SISTEMA DE AVISOS",
-            font=('Arial', 24, 'bold'),
+            texto_frame,
+            text="SISTEMA DE AVISOS",
+            font=('Arial', 26, 'bold'),
             fg='#00bcd4',
-            bg='#0d1421'
+            bg='#0a0e1a'
         )
-        titulo.pack(pady=15)
+        titulo.pack(anchor='w')
+        
+        # Subtítulo
+        subtitulo = tk.Label(
+            texto_frame,
+            text="Centro de Control Unificado",
+            font=('Arial', 12),
+            fg='#64b5f6',
+            bg='#0a0e1a'
+        )
+        subtitulo.pack(anchor='w')
         
         # Estado del servidor
         self.label_estado_servidor = tk.Label(
@@ -114,7 +186,7 @@ class SistemaAvisosUnificado:
             text="🔴 Servidor Desactivado",
             font=('Arial', 12, 'bold'),
             fg='#f44336',
-            bg='#0d1421'
+            bg='#0a0e1a'
         )
         self.label_estado_servidor.pack()
     
@@ -874,61 +946,86 @@ class SistemaAvisosUnificado:
             cliente_socket.close()
     
     def mostrar_aviso_recibido(self, aviso, origen):
-        """Muestra el aviso recibido en una ventana"""
+        """Muestra el aviso recibido en una ventana mejorada con icono"""
         def crear_ventana_aviso():
             ventana_aviso = tk.Toplevel()
             ventana_aviso.title("🚨 AVISO RECIBIDO 🚨")
             ventana_aviso.attributes('-fullscreen', True)
             ventana_aviso.attributes('-topmost', True)
-            ventana_aviso.configure(bg='red')
+            ventana_aviso.configure(bg='#1a237e')
             
-            # Frame principal con animación
-            frame_principal = tk.Frame(ventana_aviso, bg='red')
-            frame_principal.pack(expand=True, fill='both', padx=50, pady=50)
+            # Configurar icono si está disponible
+            if self.icono_app:
+                ventana_aviso.iconphoto(False, self.icono_app)
             
-            # Título parpadeante
+            # Frame principal con gradiente visual
+            frame_principal = tk.Frame(ventana_aviso, bg='#1a237e')
+            frame_principal.pack(expand=True, fill='both', padx=80, pady=80)
+            
+            # Frame superior con icono y título
+            frame_header = tk.Frame(frame_principal, bg='#1a237e')
+            frame_header.pack(pady=30)
+            
+            # Icono grande en el mensaje
+            if self.icono_mensaje:
+                icono_label = tk.Label(
+                    frame_header,
+                    image=self.icono_mensaje,
+                    bg='#1a237e'
+                )
+                icono_label.pack(pady=20)
+            
+            # Título parpadeante mejorado
             titulo = tk.Label(
-                frame_principal,
+                frame_header,
                 text="🚨 AVISO IMPORTANTE 🚨",
-                font=('Arial', 48, 'bold'),
-                fg='white',
-                bg='red'
+                font=('Arial', 42, 'bold'),
+                fg='#ffeb3b',
+                bg='#1a237e'
             )
-            titulo.pack(pady=30)
+            titulo.pack(pady=20)
             
-            # Mensaje principal
+            # Frame para el mensaje con borde
+            frame_mensaje = tk.Frame(frame_principal, bg='#3f51b5', relief='raised', bd=3)
+            frame_mensaje.pack(pady=30, padx=50, fill='x')
+            
+            # Mensaje principal con mejor formato
             mensaje_texto = aviso.get('mensaje', 'Aviso sin mensaje')
             mensaje = tk.Label(
-                frame_principal,
+                frame_mensaje,
                 text=mensaje_texto,
-                font=('Arial', 36, 'bold'),
-                fg='yellow',
-                bg='red',
-                wraplength=900,
-                justify='center'
+                font=('Arial', 32, 'bold'),
+                fg='white',
+                bg='#3f51b5',
+                wraplength=1000,
+                justify='center',
+                pady=30
             )
-            mensaje.pack(pady=30)
+            mensaje.pack(pady=20, padx=30)
             
-            # Información adicional
+            # Información adicional con mejor diseño
             timestamp = aviso.get('timestamp', datetime.now().isoformat())
             try:
                 fecha_hora = datetime.fromisoformat(timestamp.replace('Z', '+00:00')).strftime('%d/%m/%Y %H:%M:%S')
             except:
                 fecha_hora = datetime.now().strftime('%d/%m/%Y %H:%M:%S')
                 
+            frame_info = tk.Frame(frame_principal, bg='#1a237e')
+            frame_info.pack(pady=20)
+            
             info = f"📍 Enviado desde: {origen[0]}\n⏰ Hora: {fecha_hora}"
             info_label = tk.Label(
-                frame_principal,
+                frame_info,
                 text=info,
-                font=('Arial', 20),
-                fg='white',
-                bg='red',
+                font=('Arial', 18, 'bold'),
+                fg='#81c784',
+                bg='#1a237e',
                 justify='center'
             )
-            info_label.pack(pady=20)
+            info_label.pack(pady=10)
             
-            # Frame de botones
-            frame_botones = tk.Frame(frame_principal, bg='red')
+            # Frame de botones mejorado
+            frame_botones = tk.Frame(frame_principal, bg='#1a237e')
             frame_botones.pack(pady=40)
             
             def cerrar_aviso():
@@ -945,31 +1042,34 @@ class SistemaAvisosUnificado:
                     self.enviar_respuesta_aviso(origen[0], respuesta)
                 cerrar_aviso()
             
-            # Botón cerrar
-            boton_cerrar = tk.Button(
+            # Botones con mejor diseño
+            btn_cerrar = tk.Button(
                 frame_botones,
-                text="✅ CERRAR AVISO",
-                font=('Arial', 24, 'bold'),
-                bg='white',
-                fg='red',
+                text="✅ ENTENDIDO",
                 command=cerrar_aviso,
-                padx=30,
-                pady=15
-            )
-            boton_cerrar.pack(side='left', padx=20)
-            
-            # Botón responder
-            boton_responder = tk.Button(
-                frame_botones,
-                text="📨 RESPONDER",
-                font=('Arial', 24, 'bold'),
+                font=('Arial', 16, 'bold'),
                 bg='#4caf50',
                 fg='white',
-                command=responder_aviso,
                 padx=30,
-                pady=15
+                pady=15,
+                relief='raised',
+                bd=3
             )
-            boton_responder.pack(side='left', padx=20)
+            btn_cerrar.pack(side='left', padx=20)
+            
+            btn_responder = tk.Button(
+                frame_botones,
+                text="💬 RESPONDER",
+                command=responder_aviso,
+                font=('Arial', 16, 'bold'),
+                bg='#2196f3',
+                fg='white',
+                padx=30,
+                pady=15,
+                relief='raised',
+                bd=3
+            )
+            btn_responder.pack(side='left', padx=20)
             
             # Auto-cerrar si está configurado
             if aviso.get('auto_cerrar', False):
@@ -990,17 +1090,31 @@ class SistemaAvisosUnificado:
             ventana_aviso.bind('<Return>', lambda e: cerrar_aviso())
             ventana_aviso.bind('<space>', lambda e: cerrar_aviso())
             
-            # Efecto de parpadeo del título
+            # Efecto de parpadeo del título mejorado
             def parpadear():
                 try:
                     color_actual = titulo.cget('fg')
-                    nuevo_color = 'yellow' if color_actual == 'white' else 'white'
+                    nuevo_color = '#ffffff' if color_actual == '#ffeb3b' else '#ffeb3b'
                     titulo.config(fg=nuevo_color)
-                    ventana_aviso.after(500, parpadear)
+                    ventana_aviso.after(800, parpadear)
                 except:
                     pass
             
+            # Iniciar parpadeo
             parpadear()
+            
+            # Efecto de pulsación en botones
+            def efecto_hover_enter(event):
+                event.widget.config(relief='sunken')
+            
+            def efecto_hover_leave(event):
+                event.widget.config(relief='raised')
+            
+            
+            btn_cerrar.bind('<Enter>', efecto_hover_enter)
+            btn_cerrar.bind('<Leave>', efecto_hover_leave)
+            btn_responder.bind('<Enter>', efecto_hover_enter)
+            btn_responder.bind('<Leave>', efecto_hover_leave)
             
             # Sonido de alerta (múltiples intentos)
             def reproducir_sonido():
