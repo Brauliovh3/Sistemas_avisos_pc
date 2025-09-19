@@ -53,7 +53,7 @@ class SistemaAvisosUnificado:
     
     def configurar_ventana(self):
         """Configura la ventana principal"""
-        self.ventana.title("🚀 Sistema de Avisos Unificado - TODO EN UNO")
+        self.ventana.title("🚀 Sistema de Avisos")
         self.ventana.geometry("1200x800")
         self.ventana.configure(bg='#0d1421')
         self.ventana.eval('tk::PlaceWindow . center')
@@ -101,7 +101,7 @@ class SistemaAvisosUnificado:
         # Título principal
         titulo = tk.Label(
             header_frame,
-            text="🚀 SISTEMA DE AVISOS UNIFICADO",
+            text="🚀 SISTEMA DE AVISOS",
             font=('Arial', 24, 'bold'),
             fg='#00bcd4',
             bg='#0d1421'
@@ -343,10 +343,10 @@ class SistemaAvisosUnificado:
         frame_envio = tk.Frame(self.notebook, bg='#1e2832')
         self.notebook.add(frame_envio, text="📤 Enviar Avisos")
         
-        # Configuración de destino
+        # Configuración de destino SIMPLIFICADA
         destino_frame = tk.LabelFrame(
             frame_envio,
-            text="🎯 CONFIGURACIÓN DE DESTINO",
+            text="🎯 SELECCIONAR PC DESTINO",
             font=('Arial', 14, 'bold'),
             fg='#00bcd4',
             bg='#263238',
@@ -357,84 +357,66 @@ class SistemaAvisosUnificado:
         destino_inner = tk.Frame(destino_frame, bg='#263238')
         destino_inner.pack(fill='x', padx=15, pady=15)
         
-        # IP destino
-        ip_frame = tk.Frame(destino_inner, bg='#263238')
-        ip_frame.pack(fill='x', pady=5)
+        # Selector de PC simplificado
+        pc_frame = tk.Frame(destino_inner, bg='#263238')
+        pc_frame.pack(fill='x', pady=10)
         
         tk.Label(
-            ip_frame,
-            text="🖥️ IP del servidor destino:",
+            pc_frame,
+            text="� Seleccionar PC:",
             font=('Arial', 12, 'bold'),
             fg='white',
             bg='#263238'
         ).pack(side='left')
         
-        self.entry_ip_destino = tk.Entry(
-            ip_frame,
+        # Combo con PCs agregadas
+        self.combo_pcs_destino = ttk.Combobox(
+            pc_frame,
             font=('Arial', 12),
-            width=20,
-            bg='#37474f',
-            fg='white',
-            insertbackground='white'
-        )
-        self.entry_ip_destino.pack(side='left', padx=(10, 5))
-        if self.ips_guardadas:
-            self.entry_ip_destino.insert(0, self.ips_guardadas[0])
-        
-        # Dropdown de IPs
-        self.combo_ips_destino = ttk.Combobox(
-            ip_frame,
-            values=self.ips_guardadas,
-            font=('Arial', 10),
-            width=15,
+            width=35,
             state="readonly"
         )
-        self.combo_ips_destino.pack(side='left', padx=5)
-        self.combo_ips_destino.bind('<<ComboboxSelected>>', self.seleccionar_ip_destino)
+        self.combo_pcs_destino.pack(side='left', padx=10)
         
-        # Botones de IP
+        # Botón refrescar lista
         tk.Button(
-            ip_frame,
-            text="💾",
-            command=self.guardar_ip_destino,
-            bg='#4caf50',
+            pc_frame,
+            text="🔄",
+            command=self.actualizar_combo_pcs,
+            bg='#ff9800',
             fg='white',
             font=('Arial', 10, 'bold'),
-            width=3
-        ).pack(side='left', padx=2)
+            width=3,
+            height=1
+        ).pack(side='left', padx=5)
         
+        # Botón probar conexión
         tk.Button(
-            ip_frame,
-            text="🔗",
-            command=self.probar_conexion_destino,
+            pc_frame,
+            text="� PROBAR",
+            command=self.probar_conexion_pc_seleccionada,
             bg='#2196f3',
             fg='white',
             font=('Arial', 10, 'bold'),
-            width=3
-        ).pack(side='left', padx=2)
+            padx=10
+        ).pack(side='left', padx=5)
         
-        # Puerto destino
-        puerto_frame = tk.Frame(destino_inner, bg='#263238')
-        puerto_frame.pack(fill='x', pady=5)
-        
-        tk.Label(
-            puerto_frame,
-            text="🔌 Puerto:",
-            font=('Arial', 12, 'bold'),
-            fg='white',
+        # Información de la PC seleccionada
+        self.label_info_pc = tk.Label(
+            destino_inner,
+            text="Selecciona una PC para ver su información",
+            font=('Arial', 10),
+            fg='#ffcc80',
             bg='#263238'
-        ).pack(side='left')
-        
-        self.entry_puerto_destino = tk.Entry(
-            puerto_frame,
-            font=('Arial', 12),
-            width=10,
-            bg='#37474f',
-            fg='white',
-            insertbackground='white'
         )
-        self.entry_puerto_destino.pack(side='left', padx=(10, 0))
-        self.entry_puerto_destino.insert(0, "8888")
+        self.label_info_pc.pack(pady=5)
+        
+        # Bind para mostrar info al seleccionar
+        self.combo_pcs_destino.bind('<<ComboboxSelected>>', self.mostrar_info_pc_seleccionada)
+        
+        # Inicializar la lista después de crear todos los elementos
+        self.actualizar_combo_pcs()
+        
         
         # Avisos rápidos
         avisos_frame = tk.LabelFrame(
@@ -1164,17 +1146,30 @@ class SistemaAvisosUnificado:
         threading.Thread(target=test, daemon=True).start()
 
     def enviar_aviso(self, mensaje, auto_cerrar=False):
-        """Envía aviso a IP configurada"""
+        """Envía aviso a PC seleccionada"""
         def envio():
             try:
-                ip = self.entry_ip_destino.get().strip()
-                puerto = int(self.entry_puerto_destino.get().strip())
-                
-                if not ip or not mensaje:
-                    messagebox.showerror("Error", "Completa todos los campos")
+                # Obtener PC seleccionada del combo
+                pc_seleccionada = self.combo_pcs_destino.get().strip()
+                if not pc_seleccionada:
+                    messagebox.showerror("Error", "Selecciona una PC de la lista")
                     return
                 
-                self.agregar_log(f"📤 Enviando aviso a {ip}:{puerto}")
+                if not mensaje:
+                    messagebox.showerror("Error", "El mensaje no puede estar vacío")
+                    return
+                
+                # Extraer IP de la PC seleccionada (formato: "Nombre - IP")
+                try:
+                    ip = pc_seleccionada.split(" - ")[1]
+                    nombre_pc = pc_seleccionada.split(" - ")[0]
+                except:
+                    messagebox.showerror("Error", "Formato de PC inválido. Actualiza la lista.")
+                    return
+                
+                puerto = 8888  # Puerto fijo
+                
+                self.agregar_log(f"📤 Enviando aviso a {nombre_pc} ({ip}:{puerto})")
                 
                 aviso = {
                     'mensaje': mensaje,
@@ -1184,7 +1179,7 @@ class SistemaAvisosUnificado:
                 }
                 
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-                    sock.settimeout(10)  # Aumentado de 5 a 10 segundos
+                    sock.settimeout(10)
                     sock.connect((ip, puerto))
                     sock.send(json.dumps(aviso, ensure_ascii=False).encode('utf-8'))
                     
@@ -1192,23 +1187,23 @@ class SistemaAvisosUnificado:
                     respuesta_json = json.loads(respuesta)
                     
                     if respuesta_json.get('status') == 'ok':
-                        self.agregar_log("✅ Aviso enviado exitosamente")
-                        messagebox.showinfo("Éxito", "¡Aviso enviado!")
+                        self.agregar_log(f"✅ Aviso enviado a {nombre_pc}")
+                        messagebox.showinfo("Éxito", f"¡Aviso enviado a {nombre_pc}!")
                     else:
                         self.agregar_log("❌ Error en respuesta del servidor")
                         
             except socket.timeout:
-                self.agregar_log(f"❌ Timeout - No respuesta de {ip}:{puerto}")
-                messagebox.showerror("Error de Conexión", f"Timeout conectando a {ip}:{puerto}\n\n¿El servidor está funcionando en esa computadora?")
+                self.agregar_log(f"❌ Timeout - No respuesta de {nombre_pc}")
+                messagebox.showerror("Error de Conexión", f"Timeout conectando a {nombre_pc}\n\n¿El servidor está funcionando en esa computadora?")
             except ConnectionRefusedError:
-                self.agregar_log(f"❌ Conexión rechazada por {ip}:{puerto}")
-                messagebox.showerror("Error de Conexión", f"Conexión rechazada por {ip}:{puerto}\n\n¿El servidor está funcionando en el puerto {puerto}?")
+                self.agregar_log(f"❌ Conexión rechazada por {nombre_pc}")
+                messagebox.showerror("Error de Conexión", f"Conexión rechazada por {nombre_pc}\n\n¿El servidor está funcionando?")
             except socket.gaierror:
                 self.agregar_log(f"❌ No se puede resolver la IP: {ip}")
-                messagebox.showerror("Error de Red", f"No se puede resolver la IP: {ip}\n\nVerifica que la IP sea correcta.")
+                messagebox.showerror("Error de Red", f"No se puede resolver la IP de {nombre_pc}\n\nVerifica la configuración.")
             except Exception as e:
                 self.agregar_log(f"❌ Error enviando: {e}")
-                messagebox.showerror("Error", f"Error enviando mensaje:\n{str(e)}")
+                messagebox.showerror("Error", f"Error enviando mensaje a {nombre_pc}:\n{str(e)}")
         
         threading.Thread(target=envio, daemon=True).start()
     
@@ -1271,6 +1266,7 @@ class SistemaAvisosUnificado:
             
             self.guardar_configuracion()
             self.actualizar_tree_pcs()
+            self.actualizar_combo_pcs()  # Actualizar también el combo de envío
             self.actualizar_estado_computadoras()
             self.label_pc_seleccionada.config(text="Ninguna PC seleccionada")
             self.agregar_log(f"🗑️ PC eliminada: {nombre}")
@@ -1323,6 +1319,7 @@ class SistemaAvisosUnificado:
             
             self.guardar_configuracion()
             self.actualizar_tree_pcs()
+            self.actualizar_combo_pcs()  # Actualizar también el combo de envío
             self.actualizar_estado_computadoras()
             dialog.destroy()
         
@@ -1465,6 +1462,84 @@ class SistemaAvisosUnificado:
         self.text_logs_principal.config(state='normal')
         self.text_logs_principal.delete('1.0', tk.END)
         self.text_logs_principal.config(state='disabled')
+    
+    def actualizar_combo_pcs(self):
+        """Actualiza la lista de PCs en el combo"""
+        try:
+            pc_list = [f"{pc['nombre']} - {pc['ip']}" for pc in self.computadoras]
+            
+            self.combo_pcs_destino['values'] = pc_list
+            
+            if pc_list:
+                self.combo_pcs_destino.set(pc_list[0])  # Seleccionar primera PC por defecto
+                self.mostrar_info_pc_seleccionada()
+            else:
+                self.combo_pcs_destino.set("")
+                # Solo mostrar mensaje si el label existe
+                if hasattr(self, 'label_info_pc'):
+                    self.label_info_pc.config(text="No hay PCs configuradas. Ve a Administrar Computadoras.")
+                
+        except Exception as e:
+            self.agregar_log(f"❌ Error actualizando lista: {e}")
+            # Solo mostrar mensaje si el label existe
+            if hasattr(self, 'label_info_pc'):
+                self.label_info_pc.config(text="Error cargando PCs")
+    
+    def mostrar_info_pc_seleccionada(self, event=None):
+        """Muestra información de la PC seleccionada"""
+        pc_seleccionada = self.combo_pcs_destino.get().strip()
+        if not pc_seleccionada:
+            if hasattr(self, 'label_info_pc'):
+                self.label_info_pc.config(text="Ninguna PC seleccionada")
+            return
+        
+        try:
+            nombre_pc = pc_seleccionada.split(" - ")[0]
+            ip = pc_seleccionada.split(" - ")[1]
+            info_text = f"PC: {nombre_pc} | IP: {ip} | Puerto: 8888"
+            if hasattr(self, 'label_info_pc'):
+                self.label_info_pc.config(text=info_text)
+        except:
+            if hasattr(self, 'label_info_pc'):
+                self.label_info_pc.config(text="Error en formato de PC")
+    
+    def probar_conexion_pc_seleccionada(self):
+        """Prueba la conexión con la PC seleccionada"""
+        pc_seleccionada = self.combo_pcs_destino.get().strip()
+        if not pc_seleccionada:
+            messagebox.showerror("Error", "Selecciona una PC de la lista")
+            return
+        
+        def probar():
+            try:
+                ip = pc_seleccionada.split(" - ")[1]
+                nombre_pc = pc_seleccionada.split(" - ")[0]
+                puerto = 8888
+                
+                self.agregar_log(f"🔍 Probando conexión a {nombre_pc} ({ip}:{puerto})")
+                
+                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+                    sock.settimeout(5)
+                    sock.connect((ip, puerto))
+                    
+                    # Enviar ping
+                    ping = {'tipo': 'ping', 'timestamp': datetime.now().isoformat()}
+                    sock.send(json.dumps(ping).encode('utf-8'))
+                    
+                    respuesta = sock.recv(1024).decode('utf-8')
+                    respuesta_json = json.loads(respuesta)
+                    
+                    if respuesta_json.get('status') == 'ok':
+                        self.agregar_log(f"✅ Conexión exitosa con {nombre_pc}")
+                        messagebox.showinfo("Éxito", f"Conexión exitosa con {nombre_pc}")
+                    else:
+                        self.agregar_log(f"❌ Respuesta inesperada de {nombre_pc}")
+                        
+            except Exception as e:
+                self.agregar_log(f"❌ Error probando conexión: {e}")
+                messagebox.showerror("Error de Conexión", f"No se puede conectar a {nombre_pc}:\n{str(e)}")
+        
+        threading.Thread(target=probar, daemon=True).start()
         self.agregar_log("Logs limpiados")
     
     def diagnostico_completo(self):

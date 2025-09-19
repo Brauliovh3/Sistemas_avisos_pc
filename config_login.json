@@ -1,0 +1,25 @@
+{
+  "ips_guardadas": [],
+  "computadoras": [
+    {
+      "nombre": "Pc1",
+      "ip": "192.168.110.13",
+      "estado": "offline",
+      "fecha_agregada": "2025-09-19T15:40:59.328392"
+    }
+  ],
+  "usuarios": {
+    "admin": {
+      "password": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+      "rol": "admin",
+      "nombre": "Administrador",
+      "activo": true
+    },
+    "cliente": {
+      "password": "09a31a7001e261ab1e056182a71d3cf57f582ca9a29cff5eb83be0f0549730a9",
+      "rol": "cliente",
+      "nombre": "Cliente",
+      "activo": true
+    }
+  }
+}
